@@ -1,0 +1,31 @@
+{
+  "name": "timepilot",
+  "version": "1.0.0",
+  "description": "Freelancers often track time and manage invoicing across scattered spreadsheets and disconnected tools, leading to lost hours, inconsistent billing, and no single source of truth for what's been billed vs. outstanding",
+  "homepage": "https://github.com/HarshavardhanPuchakayala/TimePilot-Time-Tracking-Invoicing-for-Freelancers#readme",
+  "bugs": {
+    "url": "https://github.com/HarshavardhanPuchakayala/TimePilot-Time-Tracking-Invoicing-for-Freelancers/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HarshavardhanPuchakayala/TimePilot-Time-Tracking-Invoicing-for-Freelancers.git"
+  },
+  "author": "Harsha",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev":"nodemon src/server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.9.3"
+
+  },"devDependencies": {
+        "nodemon": "^3.1.14"
+  }
+}
