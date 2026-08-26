@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Clients from "./pages/Clients";
 
 const Dashboard = () => <div>Dashboard Page</div>; // still a placeholder for now, that's fine
 
@@ -18,6 +19,10 @@ const App = () => {
           </ProtectedRoute>
         }
       />
+                  <Route path="/clients" element={<ProtectedRoute>
+              <Clients/>
+            </ProtectedRoute>}
+/>
     </Routes>
   );
 };
