@@ -3,8 +3,166 @@ import Invoice from "../models/Invoice.js";
 import Client from "../models/Client.js";
 import TimeSession from "../models/TimeSession.js";
 import Project from "../models/project.js";
-
+import PDFDocument from "pdfkit";
+import User from "../models/User.js";
 // CREATE INVOICE
+
+const generateInvoicePdf = async (req, res) => {
+  try {
+    const invoice = await Invoice.findOne({
+      _id: req.params.id,
+      owner: req.userId,
+    })
+      .populate("client")
+      .populate({
+        path: "timeSessions",
+        populate: { path: "project" },
+      });
+
+    if (!invoice) {
+      return res.status(404).json({
+        message: "Invoice not found",
+      });
+    }
+
+    const user = await User.findById(req.userId);
+
+    const doc = new PDFDocument({ margin: 50 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice-${invoice._id}.pdf`
+    );
+
+    doc.pipe(res);
+
+    // Letterhead
+    doc
+      .fontSize(18)
+      .text(user.businessName || user.name);
+
+    doc
+      .fontSize(10)
+      .text(user.businessAddress || "");
+
+    if (user.gstNumber) {
+      doc.text(`GST: ${user.gstNumber}`);
+    }
+
+    doc.moveDown();
+
+    // Invoice heading
+    doc
+      .fontSize(18)
+      .text("INVOICE", 400, 50, {
+        align: "right",
+      });
+
+    doc
+      .fontSize(10)
+      .text(
+        `Issue Date: ${invoice.issueDate.toDateString()}`,
+        {
+          align: "right",
+        }
+      );
+
+    doc.text(
+      `Due Date: ${invoice.dueDate.toDateString()}`,
+      {
+        align: "right",
+      }
+    );
+
+    doc.text(
+      `Status: ${invoice.status.toUpperCase()}`,
+      {
+        align: "right",
+      }
+    );
+
+    doc.moveDown(3);
+
+    // Bill To
+   // ---- Bill To ----
+doc.x = 50;
+doc.fontSize(12).text("Bill To:");
+doc.fontSize(10).text(invoice.client.name);
+
+if (invoice.client.company) {
+  doc.text(invoice.client.company);
+}
+
+if (invoice.client.email) {
+  doc.text(invoice.client.email);
+}
+
+    doc.fontSize(10).text(invoice.client.name);
+
+    if (invoice.client.company) {
+      doc.text(invoice.client.company);
+    }
+
+    if (invoice.client.email) {
+      doc.text(invoice.client.email);
+    }
+
+    doc.moveDown(2);
+
+    // Table
+    const tableTop = doc.y;
+
+    doc.fontSize(10).text("Project", 50, tableTop);
+    doc.text("Hours", 300, tableTop);
+    doc.text("Rate", 380, tableTop);
+    doc.text("Amount", 460, tableTop);
+
+    doc
+      .moveTo(50, tableTop + 15)
+      .lineTo(550, tableTop + 15)
+      .stroke();
+
+    let y = tableTop + 25;
+
+    invoice.timeSessions.forEach((session) => {
+      const rate = session.project.hourlyRate;
+      const amount = session.hours * rate;
+
+      doc.text(session.project.name, 50, y);
+      doc.text(session.hours.toFixed(2), 300, y);
+      doc.text(`$${rate.toFixed(2)}`, 380, y);
+      doc.text(`$${amount.toFixed(2)}`, 460, y);
+
+      y += 20;
+    });
+
+    doc
+      .moveTo(50, y + 5)
+      .lineTo(550, y + 5)
+      .stroke();
+
+    doc
+      .fontSize(12)
+      .text(
+        `Total: $${invoice.totalAmount.toFixed(2)}`,
+        400,
+        y + 15,
+        {
+          align: "right",
+        }
+      );
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 const createInvoice = async (req, res) => {
   try {
     const { clientId, timeSessionIds, dueDate } = req.body;
@@ -275,4 +433,5 @@ export {
   getInvoice,
   getUnbilledSummary,
   markInvoicePaid,
+  generateInvoicePdf
 };

@@ -17,6 +17,17 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: true
         },
+        businessName: {
+  type: String,
+},
+
+businessAddress: {
+  type: String,
+},
+
+gstNumber: {
+  type: String,
+},
     },
     {
         timestamps: true,

@@ -7,6 +7,7 @@ import {
   getInvoice,
   getUnbilledSummary,
   markInvoicePaid,
+   generateInvoicePdf,
 } from "../controllers/invoiceController.js";
 
 const router = express.Router();
@@ -16,6 +17,11 @@ router.get("/", protect, getInvoices);
 
 // IMPORTANT: specific route before /:id
 router.get("/unbilled-summary", protect, getUnbilledSummary);
+router.get(
+  "/:id/pdf",
+  protect,
+  generateInvoicePdf
+);
 
 router.get("/:id", protect, getInvoice);
 router.patch("/:id/mark-paid", protect, markInvoicePaid);

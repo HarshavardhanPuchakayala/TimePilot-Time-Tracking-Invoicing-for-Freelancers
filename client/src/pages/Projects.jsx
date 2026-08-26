@@ -1,24 +1,26 @@
 import { useEffect, useState } from "react";
 import {
-  getClients,
-  createClient,
-  updateClient,
-  deleteClient,
-} from "../api/clients";
+  getProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+} from "../api/projects";
+import { getClients } from "../api/clients";
 
-const Clients = () => {
+const Projects = () => {
+  const [projects, setProjects] = useState([]);
   const [clients, setClients] = useState([]);
 
-  // Create form state
+  // Create form
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [company, setCompany] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [clientId, setClientId] = useState("");
 
-  // Edit form state
+  // Edit form
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editCompany, setEditCompany] = useState("");
+  const [editHourlyRate, setEditHourlyRate] = useState("");
+  const [editClientId, setEditClientId] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,31 +29,42 @@ const Clients = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  // Fetch clients
+  // Fetch projects and clients
   useEffect(() => {
-    const fetchClients = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getClients();
-        setClients(response.data.clients);
+        const [projectsResponse, clientsResponse] =
+          await Promise.all([
+            getProjects(),
+            getClients(),
+          ]);
+
+        setProjects(projectsResponse.data.projects);
+        setClients(clientsResponse.data.clients);
       } catch (err) {
         setError(
           err.response?.data?.message ||
-            "Failed to load clients"
+            "Failed to load projects"
         );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchClients();
+    fetchData();
   }, []);
 
-  // Create client
+  // Create project
   const handleCreate = async (e) => {
     e.preventDefault();
 
     if (!name.trim()) {
-      setError("Client name is required");
+      setError("Project name is required");
+      return;
+    }
+
+    if (!clientId) {
+      setError("Please select a client");
       return;
     }
 
@@ -59,25 +72,24 @@ const Clients = () => {
     setError("");
 
     try {
-      const response = await createClient({
+      const response = await createProject({
         name,
-        email,
-        company,
+        hourlyRate: Number(hourlyRate),
+        clientId,
       });
 
-      setClients((prevClients) => [
-        response.data.client,
-        ...prevClients,
+      setProjects((prev) => [
+        response.data.project,
+        ...prev,
       ]);
 
-      // Clear create form
       setName("");
-      setEmail("");
-      setCompany("");
+      setHourlyRate("");
+      setClientId("");
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Failed to create client"
+          "Failed to create project"
       );
     } finally {
       setIsCreating(false);
@@ -85,11 +97,13 @@ const Clients = () => {
   };
 
   // Start editing
-  const handleEditStart = (client) => {
-    setEditingId(client._id);
-    setEditName(client.name || "");
-    setEditEmail(client.email || "");
-    setEditCompany(client.company || "");
+  const handleEditStart = (project) => {
+    setEditingId(project._id);
+    setEditName(project.name || "");
+    setEditHourlyRate(project.hourlyRate ?? "");
+    setEditClientId(
+      project.client?._id || project.client || ""
+    );
     setError("");
   };
 
@@ -97,14 +111,19 @@ const Clients = () => {
   const handleEditCancel = () => {
     setEditingId(null);
     setEditName("");
-    setEditEmail("");
-    setEditCompany("");
+    setEditHourlyRate("");
+    setEditClientId("");
   };
 
-  // Save edited client
+  // Save project
   const handleEditSave = async (id) => {
     if (!editName.trim()) {
-      setError("Client name is required");
+      setError("Project name is required");
+      return;
+    }
+
+    if (!editClientId) {
+      setError("Please select a client");
       return;
     }
 
@@ -112,17 +131,17 @@ const Clients = () => {
     setError("");
 
     try {
-      const response = await updateClient(id, {
+      const response = await updateProject(id, {
         name: editName,
-        email: editEmail,
-        company: editCompany,
+        hourlyRate: Number(editHourlyRate),
+        clientId: editClientId,
       });
 
-      setClients((prevClients) =>
-        prevClients.map((client) =>
-          client._id === id
-            ? response.data.client
-            : client
+      setProjects((prev) =>
+        prev.map((project) =>
+          project._id === id
+            ? response.data.project
+            : project
         )
       );
 
@@ -130,17 +149,17 @@ const Clients = () => {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Failed to update client"
+          "Failed to update project"
       );
     } finally {
       setIsEditing(false);
     }
   };
 
-  // Delete client
+  // Delete project
   const handleDelete = async (id) => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this client?"
+      "Are you sure you want to delete this project?"
     );
 
     if (!confirmed) return;
@@ -149,49 +168,61 @@ const Clients = () => {
     setError("");
 
     try {
-      await deleteClient(id);
+      await deleteProject(id);
 
-      setClients((prevClients) =>
-        prevClients.filter((client) => client._id !== id)
+      setProjects((prev) =>
+        prev.filter((project) => project._id !== id)
       );
 
-      // If deleted client was being edited
       if (editingId === id) {
         handleEditCancel();
       }
     } catch (err) {
       setError(
         err.response?.data?.message ||
-          "Failed to delete client"
+          "Failed to delete project"
       );
     } finally {
       setDeletingId(null);
     }
   };
 
+  // Find client name
+  const getClientName = (project) => {
+    if (project.client?.name) {
+      return project.client.name;
+    }
+
+    const client = clients.find(
+      (client) =>
+        client._id === project.client
+    );
+
+    return client?.name || "Unknown client";
+  };
+
   return (
     <div className="space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Clients</h1>
+      <h1 className="text-2xl font-bold">Projects</h1>
 
-      {/* Error */}
       {error && (
         <div className="rounded border border-red-300 bg-red-50 p-3 text-red-600">
           {error}
         </div>
       )}
 
-      {/* Create client form */}
+      {/* Create */}
       <form
         onSubmit={handleCreate}
         className="space-y-3 rounded-lg border p-4"
       >
         <h2 className="text-lg font-semibold">
-          Add Client
+          Add Project
         </h2>
 
         <input
           type="text"
-          placeholder="Name"
+          placeholder="Project name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           className="w-full rounded border p-2"
@@ -199,48 +230,60 @@ const Clients = () => {
         />
 
         <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="number"
+          min="0"
+          step="0.01"
+          placeholder="Hourly rate"
+          value={hourlyRate}
+          onChange={(e) =>
+            setHourlyRate(e.target.value)
+          }
           className="w-full rounded border p-2"
         />
 
-        <input
-          type="text"
-          placeholder="Company"
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
+        <select
+          value={clientId}
+          onChange={(e) =>
+            setClientId(e.target.value)
+          }
           className="w-full rounded border p-2"
-        />
+          required
+        >
+          <option value="">Select client</option>
+
+          {clients.map((client) => (
+            <option
+              key={client._id}
+              value={client._id}
+            >
+              {client.name}
+            </option>
+          ))}
+        </select>
 
         <button
           type="submit"
           disabled={isCreating}
           className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
         >
-          {isCreating ? "Creating..." : "Add Client"}
+          {isCreating ? "Creating..." : "Add Project"}
         </button>
       </form>
 
-      {/* Loading */}
-      {loading && <div>Loading clients...</div>}
+      {loading && <div>Loading projects...</div>}
 
-      {/* Empty */}
-      {!loading && clients.length === 0 && (
-        <div>No clients yet</div>
+      {!loading && projects.length === 0 && (
+        <div>No projects yet</div>
       )}
 
-      {/* Client list */}
-      {!loading && clients.length > 0 && (
+      {!loading && projects.length > 0 && (
         <div className="space-y-3">
-          {clients.map((client) => (
+          {projects.map((project) => (
             <div
-              key={client._id}
+              key={project._id}
               className="rounded-lg border p-4 shadow-sm"
             >
-              {editingId === client._id ? (
-                // Edit mode
+              {editingId === project._id ? (
                 <div className="space-y-3">
                   <input
                     type="text"
@@ -249,34 +292,45 @@ const Clients = () => {
                       setEditName(e.target.value)
                     }
                     className="w-full rounded border p-2"
-                    placeholder="Name"
                   />
 
                   <input
-                    type="email"
-                    value={editEmail}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editHourlyRate}
                     onChange={(e) =>
-                      setEditEmail(e.target.value)
+                      setEditHourlyRate(e.target.value)
                     }
                     className="w-full rounded border p-2"
-                    placeholder="Email"
                   />
 
-                  <input
-                    type="text"
-                    value={editCompany}
+                  <select
+                    value={editClientId}
                     onChange={(e) =>
-                      setEditCompany(e.target.value)
+                      setEditClientId(e.target.value)
                     }
                     className="w-full rounded border p-2"
-                    placeholder="Company"
-                  />
+                  >
+                    <option value="">
+                      Select client
+                    </option>
+
+                    {clients.map((client) => (
+                      <option
+                        key={client._id}
+                        value={client._id}
+                      >
+                        {client.name}
+                      </option>
+                    ))}
+                  </select>
 
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() =>
-                        handleEditSave(client._id)
+                        handleEditSave(project._id)
                       }
                       disabled={isEditing}
                       className="rounded bg-green-600 px-4 py-2 text-white disabled:opacity-50"
@@ -297,25 +351,27 @@ const Clients = () => {
                   </div>
                 </div>
               ) : (
-                // Normal mode
                 <div>
                   <h2 className="font-semibold">
-                    {client.name}
+                    {project.name}
                   </h2>
 
                   <p className="text-gray-600">
-                    {client.email || "No email"}
+                    Client: {getClientName(project)}
                   </p>
 
-                  <p className="text-gray-500">
-                    {client.company || "No company"}
+                  <p className="text-gray-600">
+                    Hourly rate: $
+                    {Number(
+                      project.hourlyRate || 0
+                    ).toFixed(2)}
                   </p>
 
                   <div className="mt-4 flex gap-2">
                     <button
                       type="button"
                       onClick={() =>
-                        handleEditStart(client)
+                        handleEditStart(project)
                       }
                       className="rounded bg-gray-700 px-4 py-2 text-sm text-white"
                     >
@@ -325,12 +381,14 @@ const Clients = () => {
                     <button
                       type="button"
                       onClick={() =>
-                        handleDelete(client._id)
+                        handleDelete(project._id)
                       }
-                      disabled={deletingId === client._id}
+                      disabled={
+                        deletingId === project._id
+                      }
                       className="rounded bg-red-600 px-4 py-2 text-sm text-white disabled:opacity-50"
                     >
-                      {deletingId === client._id
+                      {deletingId === project._id
                         ? "Deleting..."
                         : "Delete"}
                     </button>
@@ -345,4 +403,4 @@ const Clients = () => {
   );
 };
 
-export default Clients;
+export default Projects;
