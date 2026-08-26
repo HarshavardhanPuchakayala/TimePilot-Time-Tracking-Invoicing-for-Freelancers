@@ -63,22 +63,30 @@ const timeSessionSchema = new mongoose.Schema(
 );
 
 // Calculate hours automatically for timer sessions
-timeSessionSchema.pre("save", function (next) {
+// timeSessionSchema.pre("save", function (next) {
+//   if (this.entryType === "timer") {
+//     if (this.end <= this.start) {
+//       return next(
+//         new Error("End time must be after start time")
+//       );
+//     }
+
+//     const ms = this.end - this.start;
+
+//     this.hours = ms / (1000 * 60 * 60);
+//   }
+
+//   next();
+// });
+timeSessionSchema.pre("save", async function () {
   if (this.entryType === "timer") {
     if (this.end <= this.start) {
-      return next(
-        new Error("End time must be after start time")
-      );
+      throw new Error("End time must be after start time");
     }
-
     const ms = this.end - this.start;
-
     this.hours = ms / (1000 * 60 * 60);
   }
-
-  next();
 });
-
 const TimeSession = mongoose.model(
   "TimeSession",
   timeSessionSchema
