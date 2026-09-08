@@ -1,3 +1,4 @@
+<img width="1366" height="768" alt="image" src="https://github.com/user-attachments/assets/87f1b888-6285-4b79-9d1a-efead72de97d" />
 # FreelanceFlow — Time Tracking & Invoicing App
 
 A full-stack MERN application that lets freelancers track billable time against clients and projects, and generate invoices from unbilled work.
